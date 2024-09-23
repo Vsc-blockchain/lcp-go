@@ -3,9 +3,6 @@
 package ias
 
 import (
-	"encoding/hex"
-	"fmt"
-
 	"github.com/oasisprotocol/oasis-core/go/common/sgx/ias"
 )
 
@@ -45,20 +42,9 @@ WedEPrxe68ifY+5+2R+QSInNQZZlKDEPX7QKqAtoZtNXuakfC1tnpa/oJf10q3qa
 -----END CERTIFICATE-----`
 
 func init() {
-	cert := ias.CertFromPEM([]byte(vscRelayingCA))
-	initFromEnv(cert)
-}
-
-func initFromEnv(cert string) {
-	pem, err := hex.DecodeString(cert)
+	cert, _, err := ias.CertFromPEM([]byte(vscRelayingCA))
 	if err != nil {
 		panic(err)
 	}
-	rootCert, _, err := ias.CertFromPEM(pem)
-	if err != nil {
-		panic(err)
-	} else if rootCert == nil {
-		panic(fmt.Sprintf("invalid rootCert: %v", cert))
-	}
-	setRARootCert(rootCert)
+	setRARootCert(cert)
 }
