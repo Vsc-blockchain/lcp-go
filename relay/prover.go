@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp-go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp-go/relay/elc"
@@ -333,6 +334,46 @@ func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) (
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed to encode commitment proof: %w", err)
 	}
+	return cp, sc.Height, nil
+}
+
+func (pr *Prover) PacketReceipt(ctx core.QueryContext, msgTransfer core.PacketInfo, height uint64) ([]byte, clienttypes.Height, error) {
+	proof, proofHeight, err := pr.originProver.PacketReceipt(ctx, msgTransfer, height)
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed originProver.PacketReceipt: msgTransfer=%v height=%d %w", msgTransfer, height, err)
+	}
+	path := host.PacketReceiptPath(msgTransfer.SourcePort, msgTransfer.SourceChannel, msgTransfer.Sequence)
+	m := elc.MsgVerifyNonMembership{
+		ClientId:    pr.config.ElcClientId,
+		Prefix:      []byte(exported.StoreKey),
+		Path:        path,
+		ProofHeight: proofHeight,
+		Proof:       proof,
+		Signer:      pr.activeEnclaveKey.EnclaveKeyAddress,
+	}
+	fmt.Printf("\nVerifyNonMembership: %v\n\n", m)
+	res, err := pr.lcpServiceClient.VerifyNonMembership(ctx.Context(), &m)
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed ELC's VerifyNonMembership: elc_client_id=%v msg=%v %w", pr.config.ElcClientId, m, err)
+	}
+	fmt.Printf("\nVerifyNonMembershipResponse: %v\n\n", res)
+	message, err := lcptypes.EthABIDecodeHeaderedProxyMessage(res.Message)
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed to decode headered proxy message: message=%x %w", res.Message, err)
+	}
+	fmt.Printf("\nMessage: %v\n\n", message)
+	sc, err := message.GetVerifyMembershipProxyMessage()
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed GetVerifyMembershipProxyMessage: message=%x %w", res.Message, err)
+	}
+	cp, err := lcptypes.EthABIEncodeCommitmentProofs(&lcptypes.CommitmentProofs{
+		Message:    res.Message,
+		Signatures: [][]byte{res.Signature},
+	})
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed to encode commitment proof: %w", err)
+	}
+	fmt.Printf("\nCommittmentProofs: %v\n\n", cp)
 	return cp, sc.Height, nil
 }
 

@@ -131,7 +131,7 @@ func (cs ClientState) ZeroCustomFields() exported.ClientState {
 	panic("not implemented") // TODO: Implement
 }
 
-func (cs ClientState) VerifyMembership(
+func (cs ClientState) verifyMembershipInternal(
 	ctx sdk.Context,
 	clientStore storetypes.KVStore,
 	cdc codec.BinaryCodec,
@@ -141,7 +141,9 @@ func (cs ClientState) VerifyMembership(
 	proof []byte,
 	path exported.Path,
 	value []byte,
+	nonexistence bool,
 ) error {
+
 	if err := verifyDelayPeriodPassed(ctx, clientStore, height, delayTimePeriod, delayBlockPeriod); err != nil {
 		return err
 	}
@@ -183,7 +185,13 @@ func (cs ClientState) VerifyMembership(
 	if err != nil {
 		return err
 	}
-	hashedValue := crypto.Keccak256Hash(value)
+
+	var hashedValue common.Hash
+	if nonexistence {
+		hashedValue = [32]byte{0}
+	} else {
+		hashedValue = crypto.Keccak256Hash(value)
+	}
 
 	if !height.EQ(msg.Height) {
 		return errorsmod.Wrapf(ErrInvalidStateCommitment, "invalid height: expected=%v got=%v", height, msg.Height)
@@ -203,6 +211,21 @@ func (cs ClientState) VerifyMembership(
 
 	commitment := crypto.Keccak256Hash(commitmentProofs.Message)
 	return cs.VerifySignatures(ctx, clientStore, commitment, commitmentProofs.Signatures)
+
+}
+
+func (cs ClientState) VerifyMembership(
+	ctx sdk.Context,
+	clientStore storetypes.KVStore,
+	cdc codec.BinaryCodec,
+	height exported.Height,
+	delayTimePeriod uint64,
+	delayBlockPeriod uint64,
+	proof []byte,
+	path exported.Path,
+	value []byte,
+) error {
+	return cs.verifyMembershipInternal(ctx, clientStore, cdc, height, delayTimePeriod, delayBlockPeriod, proof, path, value, false)
 }
 
 // VerifyNonMembership is a generic proof verification method which verifies the absence of a given CommitmentPath at a specified height.
@@ -217,7 +240,7 @@ func (cs ClientState) VerifyNonMembership(
 	proof []byte,
 	path exported.Path,
 ) error {
-	return cs.VerifyMembership(ctx, clientStore, cdc, height, delayTimePeriod, delayBlockPeriod, proof, path, []byte{})
+	return cs.verifyMembershipInternal(ctx, clientStore, cdc, height, delayTimePeriod, delayBlockPeriod, proof, path, []byte{}, true)
 }
 
 // verifyDelayPeriodPassed will ensure that at least delayTimePeriod amount of time and delayBlockPeriod number of blocks have passed
