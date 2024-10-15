@@ -306,6 +306,10 @@ func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) (
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed originProver.ProveState: path=%v value=%x %w", path, value, err)
 	}
+	eki, err := pr.loadLastFinalizedEnclaveKey(ctx.Context())
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed to load last finalized enclave key: %w", err)
+	}
 	m := elc.MsgVerifyMembership{
 		ClientId:    pr.config.ElcClientId,
 		Prefix:      []byte(exported.StoreKey),
@@ -313,7 +317,7 @@ func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) (
 		Value:       value,
 		ProofHeight: proofHeight,
 		Proof:       proof,
-		Signer:      pr.activeEnclaveKey.EnclaveKeyAddress,
+		Signer:      eki.EnclaveKeyAddress,
 	}
 	res, err := pr.lcpServiceClient.VerifyMembership(ctx.Context(), &m)
 	if err != nil {
@@ -342,6 +346,10 @@ func (pr *Prover) PacketReceipt(ctx core.QueryContext, msgTransfer core.PacketIn
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed originProver.PacketReceipt: msgTransfer=%v height=%d %w", msgTransfer, height, err)
 	}
+	eki, err := pr.loadLastFinalizedEnclaveKey(ctx.Context())
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed to load last finalized enclave key: %w", err)
+	}
 	path := host.PacketReceiptPath(msgTransfer.SourcePort, msgTransfer.SourceChannel, msgTransfer.Sequence)
 	m := elc.MsgVerifyNonMembership{
 		ClientId:    pr.config.ElcClientId,
@@ -349,19 +357,16 @@ func (pr *Prover) PacketReceipt(ctx core.QueryContext, msgTransfer core.PacketIn
 		Path:        path,
 		ProofHeight: proofHeight,
 		Proof:       proof,
-		Signer:      pr.activeEnclaveKey.EnclaveKeyAddress,
+		Signer:      eki.EnclaveKeyAddress,
 	}
-	fmt.Printf("\nVerifyNonMembership: %v\n\n", m)
 	res, err := pr.lcpServiceClient.VerifyNonMembership(ctx.Context(), &m)
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed ELC's VerifyNonMembership: elc_client_id=%v msg=%v %w", pr.config.ElcClientId, m, err)
 	}
-	fmt.Printf("\nVerifyNonMembershipResponse: %v\n\n", res)
 	message, err := lcptypes.EthABIDecodeHeaderedProxyMessage(res.Message)
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed to decode headered proxy message: message=%x %w", res.Message, err)
 	}
-	fmt.Printf("\nMessage: %v\n\n", message)
 	sc, err := message.GetVerifyMembershipProxyMessage()
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed GetVerifyMembershipProxyMessage: message=%x %w", res.Message, err)
@@ -373,7 +378,6 @@ func (pr *Prover) PacketReceipt(ctx core.QueryContext, msgTransfer core.PacketIn
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed to encode commitment proof: %w", err)
 	}
-	fmt.Printf("\nCommittmentProofs: %v\n\n", cp)
 	return cp, sc.Height, nil
 }
 
