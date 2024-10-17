@@ -8,6 +8,7 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
+	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
 	"github.com/cosmos/ibc-go/v8/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp-go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp-go/relay/elc"
@@ -320,6 +321,10 @@ func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) (
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed originProver.ProveState: path=%v value=%x %w", path, value, err)
 	}
+	eki, err := pr.loadLastFinalizedEnclaveKey(ctx.Context())
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed to load last finalized enclave key: %w", err)
+	}
 	m := elc.MsgVerifyMembership{
 		ClientId:    pr.config.ElcClientId,
 		Prefix:      []byte(exported.StoreKey),
@@ -327,11 +332,51 @@ func (pr *Prover) ProveState(ctx core.QueryContext, path string, value []byte) (
 		Value:       value,
 		ProofHeight: proofHeight,
 		Proof:       proof,
-		Signer:      pr.activeEnclaveKey.EnclaveKeyAddress,
+		Signer:      eki.EnclaveKeyAddress,
 	}
 	res, err := pr.lcpServiceClient.VerifyMembership(ctx.Context(), &m)
 	if err != nil {
 		return nil, clienttypes.Height{}, fmt.Errorf("failed ELC's VerifyMembership: elc_client_id=%v msg=%v %w", pr.config.ElcClientId, m, err)
+	}
+	message, err := lcptypes.EthABIDecodeHeaderedProxyMessage(res.Message)
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed to decode headered proxy message: message=%x %w", res.Message, err)
+	}
+	sc, err := message.GetVerifyMembershipProxyMessage()
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed GetVerifyMembershipProxyMessage: message=%x %w", res.Message, err)
+	}
+	cp, err := lcptypes.EthABIEncodeCommitmentProofs(&lcptypes.CommitmentProofs{
+		Message:    res.Message,
+		Signatures: [][]byte{res.Signature},
+	})
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed to encode commitment proof: %w", err)
+	}
+	return cp, sc.Height, nil
+}
+
+func (pr *Prover) PacketReceipt(ctx core.QueryContext, msgTransfer core.PacketInfo, height uint64) ([]byte, clienttypes.Height, error) {
+	proof, proofHeight, err := pr.originProver.PacketReceipt(ctx, msgTransfer, height)
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed originProver.PacketReceipt: msgTransfer=%v height=%d %w", msgTransfer, height, err)
+	}
+	eki, err := pr.loadLastFinalizedEnclaveKey(ctx.Context())
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed to load last finalized enclave key: %w", err)
+	}
+	path := host.PacketReceiptPath(msgTransfer.SourcePort, msgTransfer.SourceChannel, msgTransfer.Sequence)
+	m := elc.MsgVerifyNonMembership{
+		ClientId:    pr.config.ElcClientId,
+		Prefix:      []byte(exported.StoreKey),
+		Path:        path,
+		ProofHeight: proofHeight,
+		Proof:       proof,
+		Signer:      eki.EnclaveKeyAddress,
+	}
+	res, err := pr.lcpServiceClient.VerifyNonMembership(ctx.Context(), &m)
+	if err != nil {
+		return nil, clienttypes.Height{}, fmt.Errorf("failed ELC's VerifyNonMembership: elc_client_id=%v msg=%v %w", pr.config.ElcClientId, m, err)
 	}
 	message, err := lcptypes.EthABIDecodeHeaderedProxyMessage(res.Message)
 	if err != nil {
