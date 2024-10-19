@@ -224,5 +224,5 @@ replace (
 	github.com/gogo/protobuf => github.com/gogo/protobuf v1.3.2
 	github.com/hyperledger-labs/yui-relayer => github.com/vsc-blockchain/yui-relayer v0.5.8-vsc.1
 	github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-	github.com/vsc-blockchain/core => github.com/vsc-blockchain/core v0.3.0-rc.0
+	github.com/vsc-blockchain/core => github.com/vsc-blockchain/core v0.2.0-rc.1
 )
