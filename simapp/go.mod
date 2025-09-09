@@ -19,7 +19,7 @@ require (
 	github.com/cosmos/cosmos-sdk v0.50.5
 	github.com/cosmos/gogoproto v1.4.11
 	github.com/cosmos/ibc-go/modules/capability v1.0.0
-	github.com/cosmos/ibc-go/v10 v8.2.0
+	github.com/cosmos/ibc-go/v10 v10.0.0
 	github.com/datachainlab/lcp-go v0.0.0
 	github.com/spf13/cast v1.6.0
 	github.com/spf13/cobra v1.8.0
