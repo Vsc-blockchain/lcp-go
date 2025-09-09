@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"reflect"
 
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp-go/light-clients/lcp/types"
 	"github.com/datachainlab/lcp-go/relay/elc"
 	"github.com/hyperledger-labs/yui-relayer/core"

@@ -3,7 +3,7 @@ package types
 import (
 	"fmt"
 
-	"github.com/cosmos/ibc-go/v8/modules/core/exported"
+	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"github.com/ethereum/go-ethereum/common"
 )
 

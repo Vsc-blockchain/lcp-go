@@ -10,10 +10,10 @@ import (
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	sdkerrors "github.com/cosmos/cosmos-sdk/types/errors"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	commitmenttypes "github.com/cosmos/ibc-go/v8/modules/core/23-commitment/types"
-	host "github.com/cosmos/ibc-go/v8/modules/core/24-host"
-	"github.com/cosmos/ibc-go/v8/modules/core/exported"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	commitmentv2 "github.com/cosmos/ibc-go/v10/modules/core/23-commitment/types/v2"
+	host "github.com/cosmos/ibc-go/v10/modules/core/24-host"
+	"github.com/cosmos/ibc-go/v10/modules/core/exported"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -146,12 +146,15 @@ func (cs ClientState) VerifyMembership(
 		return err
 	}
 
-	merklePath := path.(commitmenttypes.MerklePath)
-	if l := len(merklePath.KeyPath); l != 2 {
+	mpath, ok := path.(commitmentv2.MerklePath)
+	if !ok {
+		panic(fmt.Errorf("invalid path type: %T", path))
+	}
+	if l := len(mpath.KeyPath); l != 2 {
 		panic(fmt.Errorf("invalid KeyPath length: %v", l))
 	}
-	prefixBytes := []byte(merklePath.KeyPath[0])
-	commitmentPath := []byte(merklePath.KeyPath[1])
+	prefixBytes := []byte(mpath.KeyPath[0])
+	commitmentPath := []byte(mpath.KeyPath[1])
 
 	// NOTE: lcp-client-go does not yet support the consensus state verification,
 	// so skip a verification if the path represents the consensus state

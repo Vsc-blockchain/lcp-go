@@ -40,7 +40,7 @@ import (
 
 	cmtcfg "github.com/cometbft/cometbft/config"
 
-	"github.com/cosmos/ibc-go/v8/testing/simapp/params"
+	"github.com/cosmos/ibc-go/v10/testing/simapp/params"
 	"github.com/datachainlab/lcp-go/simapp"
 )
 

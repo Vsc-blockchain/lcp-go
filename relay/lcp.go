@@ -12,8 +12,8 @@ import (
 
 	"github.com/avast/retry-go"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	mapset "github.com/deckarep/golang-set/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

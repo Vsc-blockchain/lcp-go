@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	clienttypes "github.com/cosmos/ibc-go/v8/modules/core/02-client/types"
-	ibcexported "github.com/cosmos/ibc-go/v8/modules/core/exported"
+	clienttypes "github.com/cosmos/ibc-go/v10/modules/core/02-client/types"
+	ibcexported "github.com/cosmos/ibc-go/v10/modules/core/exported"
 	lcptypes "github.com/datachainlab/lcp-go/light-clients/lcp/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
